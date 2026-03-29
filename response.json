@@ -1,0 +1,80 @@
+{
+  "date": "30/03/2026",
+  "imgMenu": null,
+  "ruName": "JARDIM BOTÂNICO",
+  "ruUrl": "https://pra.ufpr.br/ru/cardapio-ru-jardim-botanico/",
+  "ruCode": "BOT",
+  "served": [
+    "breakfast",
+    "lunch",
+    "dinner"
+  ],
+  "meals": {
+    "ALMOÇO": [
+      {
+        "name": "Carne moída mexicana",
+        "icons": []
+      },
+      {
+        "name": "Opção vegana: chilli vegano",
+        "icons": []
+      },
+      {
+        "name": "Macarrão ao alho e óleo",
+        "icons": []
+      },
+      {
+        "name": "Saladas de folhosas  e beterraba ralada",
+        "icons": []
+      },
+      {
+        "name": "Molho para saladas: molho verde",
+        "icons": []
+      },
+      {
+        "name": "Melancia",
+        "icons": []
+      }
+    ],
+    "CAFÉ DA MANHÃ": [
+      {
+        "name": "Pão hot-dog ou integral com patê de tomate-seco",
+        "icons": []
+      },
+      {
+        "name": "Opção vegana: pão hot-dog ou integral com patê de tomate-seco vegano",
+        "icons": []
+      },
+      {
+        "name": "Mamão",
+        "icons": []
+      }
+    ],
+    "JANTAR": [
+      {
+        "name": "Pernil ao sugo",
+        "icons": []
+      },
+      {
+        "name": "2ª opção: omelete",
+        "icons": []
+      },
+      {
+        "name": "Opção vegana: charuto de grão-de-bico",
+        "icons": []
+      },
+      {
+        "name": "Sopa de fubá com carne desfiada",
+        "icons": []
+      },
+      {
+        "name": "Saladas de folhosas  e rabanete",
+        "icons": []
+      },
+      {
+        "name": "Molho para saladas: vinagrete",
+        "icons": []
+      }
+    ]
+  }
+}

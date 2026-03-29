@@ -1,11 +1,10 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"log"
+	"os"
 	"time"
-
-	"github.com/aws/aws-lambda-go/lambda"
 )
 
 type Request struct {
@@ -27,33 +26,25 @@ type Meal struct {
 	Icons []string `json:"icons"`
 }
 
-func handler(ctx context.Context, request Request) (Response, error) {
-	var dateToScrape time.Time
-	var err error
-
-	// Check if the date is provided; if not, use today's date
-	if request.Date == "" {
-		dateToScrape = time.Now()
-		log.Printf("No date provided, using today's date: %s", dateToScrape.Format("2006-01-02"))
-	} else {
-		log.Printf("Received date: %s", request.Date)
-		dateToScrape, err = time.Parse("2006-01-02", request.Date)
-		if err != nil {
-			log.Printf("Error parsing date: %v", err)
-			return Response{}, err
-		}
-	}
-
-	responseData, err := scrape(dateToScrape)
-	if err != nil {
-		log.Printf("Error scraping menu: %v", err)
-		return Response{}, err
-	}
-
-	return responseData, nil
-}
-
 func main() {
-	// Start the Lambda handler
-	lambda.Start(handler)
+	responseData, err := scrape(time.Now().AddDate(0, 0, 1))
+	if err != nil {
+		log.Printf(responseData.Date)
+	}
+
+	file, err := os.Create("response.json")
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	err = encoder.Encode(responseData)
+	if err != nil {
+		log.Fatalf("Failed to encode JSON: %v", err)
+	}
+
+	log.Println("Successfully saved response.json!")
 }
