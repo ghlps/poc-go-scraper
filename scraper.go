@@ -138,29 +138,59 @@ func scrape(dateToScrape time.Time) (Response, error) {
 							mealOptions = nil
 						}
 
-						currentMealType = htmlContent
+						currentMealType = mapMealType(htmlContent)
 						log.Printf("Current meal type: %s", currentMealType)
 
 					} else {
-						rawText := strings.ReplaceAll(cell.Text, "\r\n", "\n")
-						lines := strings.Split(rawText, "\n")
+						cellHTML, err := cell.DOM.Html()
+						if err != nil {
+							log.Printf("Error getting cell HTML: %v", err)
+							return
+						}
 
-						for _, line := range lines {
-							item := strings.TrimSpace(line)
-							if item != "" {
-								log.Printf("Adding meal item: %s", item)
-
-								mealOptions = append(mealOptions, Meal{
-									Name:  item,
-									Icons: []string{},
-								})
+						parts := strings.Split(cellHTML, "\n")
+						for _, part := range parts {
+							part = strings.TrimSpace(part)
+							if part == "" {
+								continue
 							}
+
+							partDOM, err := goquery.NewDocumentFromReader(strings.NewReader(part))
+							if err != nil {
+								log.Printf("Error parsing part: %v", err)
+								continue
+							}
+
+							name := strings.TrimSpace(partDOM.Text())
+							name = strings.Join(strings.Fields(name), " ")
+							if name == "" {
+								continue
+							}
+
+							icons := []string{}
+							partDOM.Find("img").Each(func(_ int, img *goquery.Selection) {
+								if title, exists := img.Attr("title"); exists && title != "" {
+									icons = append(icons, title)
+								}
+							})
+
+							log.Printf("Adding meal item: %s | icons: %v", name, icons)
+							mealOptions = append(mealOptions, Meal{
+								Name:  name,
+								Icons: icons,
+							})
 						}
 					}
 				})
 			})
 		}
 	})
+
+	// Add remaining meals (JANTAR will always land here)
+	if len(mealOptions) > 0 {
+		log.Printf("Saving meals for: %s", currentMealType)
+		responsePayload.Meals[currentMealType] = mealOptions
+	}
 
 	c.OnScraped(func(r *colly.Response) {
 		log.Println("Scraping completed.")

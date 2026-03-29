@@ -10,70 +10,110 @@
     "dinner"
   ],
   "meals": {
-    "ALMOÇO": [
-      {
-        "name": "Carne moída mexicana",
-        "icons": []
-      },
-      {
-        "name": "Opção vegana: chilli vegano",
-        "icons": []
-      },
-      {
-        "name": "Macarrão ao alho e óleo",
-        "icons": []
-      },
-      {
-        "name": "Saladas de folhosas  e beterraba ralada",
-        "icons": []
-      },
-      {
-        "name": "Molho para saladas: molho verde",
-        "icons": []
-      },
-      {
-        "name": "Melancia",
-        "icons": []
-      }
-    ],
-    "CAFÉ DA MANHÃ": [
+    "breakfast": [
       {
         "name": "Pão hot-dog ou integral com patê de tomate-seco",
-        "icons": []
+        "icons": [
+          "Contém glúten",
+          "Contém leite e/ou derivados"
+        ]
       },
       {
         "name": "Opção vegana: pão hot-dog ou integral com patê de tomate-seco vegano",
-        "icons": []
+        "icons": [
+          "Contém glúten",
+          "Indicado para veganos"
+        ]
       },
       {
         "name": "Mamão",
-        "icons": []
+        "icons": [
+          "Indicado para veganos"
+        ]
       }
     ],
-    "JANTAR": [
+    "dinner": [
       {
         "name": "Pernil ao sugo",
-        "icons": []
+        "icons": [
+          "Contêm produtos de origem animal",
+          "Contêm produtos de origem suína"
+        ]
       },
       {
         "name": "2ª opção: omelete",
-        "icons": []
+        "icons": [
+          "Contêm ovos",
+          "Contém leite e/ou derivados"
+        ]
       },
       {
         "name": "Opção vegana: charuto de grão-de-bico",
-        "icons": []
+        "icons": [
+          "Indicado para veganos"
+        ]
       },
       {
         "name": "Sopa de fubá com carne desfiada",
-        "icons": []
+        "icons": [
+          "Contêm produtos de origem animal"
+        ]
       },
       {
-        "name": "Saladas de folhosas  e rabanete",
-        "icons": []
+        "name": "Saladas de folhosas e rabanete",
+        "icons": [
+          "Indicado para veganos",
+          "Indicado para veganos"
+        ]
       },
       {
         "name": "Molho para saladas: vinagrete",
-        "icons": []
+        "icons": [
+          "Indicado para veganos"
+        ]
+      }
+    ],
+    "lunch": [
+      {
+        "name": "Carne moída mexicana",
+        "icons": [
+          "Contêm produtos de origem animal",
+          "Contém pimenta"
+        ]
+      },
+      {
+        "name": "Opção vegana: chilli vegano",
+        "icons": [
+          "Contém pimenta",
+          "Contém ingrediente(s) potencialmente alergênico(s)",
+          "Indicado para veganos"
+        ]
+      },
+      {
+        "name": "Macarrão ao alho e óleo",
+        "icons": [
+          "Indicado para veganos",
+          "Contém glúten"
+        ]
+      },
+      {
+        "name": "Saladas de folhosas e beterraba ralada",
+        "icons": [
+          "Indicado para veganos",
+          "Indicado para veganos"
+        ]
+      },
+      {
+        "name": "Molho para saladas: molho verde",
+        "icons": [
+          "Contém leite e/ou derivados"
+        ]
+      },
+      {
+        "name": "Melancia",
+        "icons": [
+          "Indicado para veganos"
+        ]
       }
     ]
   }
