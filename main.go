@@ -1,50 +1,32 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
+	"go-scraper/internal/db"
+	"go-scraper/internal/scraper"
 	"log"
-	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
-type Request struct {
-	Date string `json:"date"`
-}
-
-type Response struct {
-	Date    string            `json:"date"`
-	ImgMenu *string           `json:"imgMenu"`
-	RuName  string            `json:"ruName"`
-	RuUrl   string            `json:"ruUrl"`
-	RuCode  string            `json:"ruCode"`
-	Served  []string          `json:"served"`
-	Meals   map[string][]Meal `json:"meals"`
-}
-
-type Meal struct {
-	Name  string   `json:"name"`
-	Icons []string `json:"icons"`
-}
-
 func main() {
-	responseData, err := scrape(time.Now().AddDate(0, 0, 1))
+	ctx := context.Background()
+	_ = godotenv.Load()
+
+	responseData, err := scraper.Scrape(time.Now())
 	if err != nil {
-		log.Printf(responseData.Date)
+		log.Fatalf("scrape failed: %v", err)
 	}
 
-	file, err := os.Create("response.json")
+	store, err := db.NewStore(ctx)
 	if err != nil {
-		log.Fatalf("Failed to create file: %v", err)
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-
-	err = encoder.Encode(responseData)
-	if err != nil {
-		log.Fatalf("Failed to encode JSON: %v", err)
+		log.Fatalf("create store failed: %v", err)
 	}
 
-	log.Println("Successfully saved response.json!")
+	if err := store.Save(ctx, responseData); err != nil {
+		log.Fatalf("db save failed: %v", err)
+	}
+
+	log.Println("saved to file and db!")
 }
