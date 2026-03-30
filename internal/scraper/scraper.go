@@ -1,6 +1,7 @@
-package main
+package scraper
 
 import (
+	"go-scraper/internal/models"
 	"log"
 	"strings"
 	"time"
@@ -9,61 +10,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func getFormattedDate(date time.Time) string {
-	return date.Format("02/01/2006")
-}
-
-func mapMealType(htmlContent string) string {
-	if strings.Contains(htmlContent, "CAFÉ DA MANHÃ") {
-		return "breakfast"
-	} else if strings.Contains(htmlContent, "ALMOÇO") {
-		return "lunch"
-	} else if strings.Contains(htmlContent, "JANTAR") {
-		return "dinner"
-	}
-	return ""
-}
-
-func extractMealColly(cell *colly.HTMLElement) []Meal {
-	var meals []Meal
-
-	htmlContent, err := cell.DOM.Html()
-	if err != nil {
-		log.Printf("Error getting HTML content: %v", err)
-		return nil
-	}
-
-	contentParts := strings.Split(htmlContent, "<br/>")
-	for _, part := range contentParts {
-		partDOM, err := goquery.NewDocumentFromReader(strings.NewReader(part))
-		if err != nil {
-			log.Printf("Error creating DOM from part: %v", err)
-			continue
-		}
-
-		icons := []string{}
-		partDOM.Find("img").Each(func(_ int, img *goquery.Selection) {
-			src, exists := img.Attr("src")
-			if exists {
-				icons = append(icons, src)
-			}
-		})
-
-		name := strings.TrimSpace(partDOM.Text())
-
-		if name != "" {
-			log.Printf("Meal parsed: %s", name)
-			meals = append(meals, Meal{
-				Name:  name,
-				Icons: icons,
-			})
-		}
-	}
-
-	return meals
-}
-
-func scrape(dateToScrape time.Time) (Response, error) {
+func Scrape(dateToScrape time.Time) (models.ResponseData, error) {
 	log.Printf("Doing a request with the date %s", getFormattedDate(dateToScrape))
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
@@ -88,18 +35,18 @@ func scrape(dateToScrape time.Time) (Response, error) {
 	})
 
 	formattedDate := getFormattedDate(dateToScrape)
-	responsePayload := Response{
+	responsePayload := models.ResponseData{
 		Date:    formattedDate,
 		ImgMenu: nil,
 		RuName:  "JARDIM BOTÂNICO",
 		RuUrl:   "https://pra.ufpr.br/ru/cardapio-ru-jardim-botanico/",
 		RuCode:  "BOT",
 		Served:  []string{"breakfast", "lunch", "dinner"},
-		Meals:   make(map[string][]Meal),
+		Meals:   make(map[string][]models.Meal),
 	}
 
 	var currentMealType string
-	var mealOptions []Meal
+	var mealOptions []models.Meal
 
 	var dateFound bool
 	var tableFound bool
@@ -175,7 +122,7 @@ func scrape(dateToScrape time.Time) (Response, error) {
 							})
 
 							log.Printf("Adding meal item: %s | icons: %v", name, icons)
-							mealOptions = append(mealOptions, Meal{
+							mealOptions = append(mealOptions, models.Meal{
 								Name:  name,
 								Icons: icons,
 							})
@@ -186,7 +133,6 @@ func scrape(dateToScrape time.Time) (Response, error) {
 		}
 	})
 
-	// Add remaining meals (JANTAR will always land here)
 	if len(mealOptions) > 0 {
 		log.Printf("Saving meals for: %s", currentMealType)
 		responsePayload.Meals[currentMealType] = mealOptions
@@ -199,7 +145,7 @@ func scrape(dateToScrape time.Time) (Response, error) {
 	err := c.Visit("https://pra.ufpr.br/ru/cardapio-ru-jardim-botanico/")
 	if err != nil {
 		log.Printf("Error visiting page: %v", err)
-		return Response{}, err
+		return models.ResponseData{}, err
 	}
 
 	if len(mealOptions) > 0 {
