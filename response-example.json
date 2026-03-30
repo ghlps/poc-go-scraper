@@ -4,32 +4,20 @@
   "ruName": "JARDIM BOTÂNICO",
   "ruUrl": "https://pra.ufpr.br/ru/cardapio-ru-jardim-botanico/",
   "ruCode": "BOT",
-  "served": [
-    "breakfast",
-    "lunch",
-    "dinner"
-  ],
+  "served": ["breakfast", "lunch", "dinner"],
   "meals": {
     "breakfast": [
       {
         "name": "Pão hot-dog ou integral com patê de tomate-seco",
-        "icons": [
-          "Contém glúten",
-          "Contém leite e/ou derivados"
-        ]
+        "icons": ["Contém glúten", "Contém leite e/ou derivados"]
       },
       {
         "name": "Opção vegana: pão hot-dog ou integral com patê de tomate-seco vegano",
-        "icons": [
-          "Contém glúten",
-          "Indicado para veganos"
-        ]
+        "icons": ["Contém glúten", "Indicado para veganos"]
       },
       {
         "name": "Mamão",
-        "icons": [
-          "Indicado para veganos"
-        ]
+        "icons": ["Indicado para veganos"]
       }
     ],
     "dinner": [
@@ -42,44 +30,29 @@
       },
       {
         "name": "2ª opção: omelete",
-        "icons": [
-          "Contêm ovos",
-          "Contém leite e/ou derivados"
-        ]
+        "icons": ["Contêm ovos", "Contém leite e/ou derivados"]
       },
       {
         "name": "Opção vegana: charuto de grão-de-bico",
-        "icons": [
-          "Indicado para veganos"
-        ]
+        "icons": ["Indicado para veganos"]
       },
       {
         "name": "Sopa de fubá com carne desfiada",
-        "icons": [
-          "Contêm produtos de origem animal"
-        ]
+        "icons": ["Contêm produtos de origem animal"]
       },
       {
         "name": "Saladas de folhosas e rabanete",
-        "icons": [
-          "Indicado para veganos",
-          "Indicado para veganos"
-        ]
+        "icons": ["Indicado para veganos", "Indicado para veganos"]
       },
       {
         "name": "Molho para saladas: vinagrete",
-        "icons": [
-          "Indicado para veganos"
-        ]
+        "icons": ["Indicado para veganos"]
       }
     ],
     "lunch": [
       {
         "name": "Carne moída mexicana",
-        "icons": [
-          "Contêm produtos de origem animal",
-          "Contém pimenta"
-        ]
+        "icons": ["Contêm produtos de origem animal", "Contém pimenta"]
       },
       {
         "name": "Opção vegana: chilli vegano",
@@ -91,29 +64,19 @@
       },
       {
         "name": "Macarrão ao alho e óleo",
-        "icons": [
-          "Indicado para veganos",
-          "Contém glúten"
-        ]
+        "icons": ["Indicado para veganos", "Contém glúten"]
       },
       {
         "name": "Saladas de folhosas e beterraba ralada",
-        "icons": [
-          "Indicado para veganos",
-          "Indicado para veganos"
-        ]
+        "icons": ["Indicado para veganos", "Indicado para veganos"]
       },
       {
         "name": "Molho para saladas: molho verde",
-        "icons": [
-          "Contém leite e/ou derivados"
-        ]
+        "icons": ["Contém leite e/ou derivados"]
       },
       {
         "name": "Melancia",
-        "icons": [
-          "Indicado para veganos"
-        ]
+        "icons": ["Indicado para veganos"]
       }
     ]
   }

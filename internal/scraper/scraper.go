@@ -11,7 +11,8 @@ import (
 )
 
 func Scrape(dateToScrape time.Time) (models.ResponseData, error) {
-	log.Printf("Doing a request with the date %s", getFormattedDate(dateToScrape))
+	formattedDate := getFormattedDate(dateToScrape)
+	log.Printf("Doing a request with the date %s", formattedDate)
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
 	)
@@ -34,7 +35,25 @@ func Scrape(dateToScrape time.Time) (models.ResponseData, error) {
 		}
 	})
 
-	formattedDate := getFormattedDate(dateToScrape)
+	return actuallyScrape(formattedDate, c)
+}
+
+func checkIfDateExists(c *colly.Collector, dateFound bool, formattedDate string, tableFound bool) {
+	c.OnHTML("strong", func(e *colly.HTMLElement) {
+		if !dateFound {
+			dateText := strings.TrimSpace(e.Text)
+			log.Printf("Found date: %s", dateText)
+
+			if strings.Contains(dateText, formattedDate) {
+				log.Printf("Matching date found: %s", formattedDate)
+				dateFound = true
+				tableFound = false
+			}
+		}
+	})
+}
+
+func actuallyScrape(formattedDate string, c *colly.Collector) (models.ResponseData, error) {
 	responsePayload := models.ResponseData{
 		Date:    formattedDate,
 		ImgMenu: nil,
@@ -52,19 +71,7 @@ func Scrape(dateToScrape time.Time) (models.ResponseData, error) {
 	var tableFound bool
 
 	log.Printf("Starting to scrape the page: %s", responsePayload.RuUrl)
-
-	c.OnHTML("strong", func(e *colly.HTMLElement) {
-		if !dateFound {
-			dateText := strings.TrimSpace(e.Text)
-			log.Printf("Found date: %s", dateText)
-
-			if strings.Contains(dateText, formattedDate) {
-				log.Printf("Matching date found: %s", formattedDate)
-				dateFound = true
-				tableFound = false
-			}
-		}
-	})
+	checkIfDateExists(c, dateFound, formattedDate, tableFound)
 
 	c.OnHTML("figure.wp-block-table", func(e *colly.HTMLElement) {
 		if dateFound && !tableFound {
