@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
+	appconfig "go-scraper/internal/config"
 	"go-scraper/internal/models"
-	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -20,20 +20,21 @@ type Store struct {
 	client *dynamodb.Client
 }
 
-func NewStore(ctx context.Context) (*Store, error) {
+func NewStore(ctx context.Context, cfgApp appconfig.Config) (*Store, error) {
 	var client *dynamodb.Client
 
-	if os.Getenv("APP_ENV") == "dev" {
+	if cfgApp.IsDev {
 		cfg, err := config.LoadDefaultConfig(ctx,
 			config.WithRegion("us-east-1"),
 			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("dummy", "dummy", "")),
 		)
+
 		if err != nil {
 			return nil, fmt.Errorf("load aws config: %w", err)
 		}
 
 		client = dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-			o.BaseEndpoint = aws.String("http://localhost:8000")
+			o.BaseEndpoint = aws.String(cfgApp.DynamoURL)
 		})
 	} else {
 		cfg, err := config.LoadDefaultConfig(ctx)
@@ -46,7 +47,7 @@ func NewStore(ctx context.Context) (*Store, error) {
 	return &Store{client: client}, nil
 }
 
-func (s *Store) Save(ctx context.Context, data models.ResponseData) error {
+func (s *Store) Save(ctx context.Context, data models.ExecutionState) error {
 	item, err := attributevalue.MarshalMap(data)
 	if err != nil {
 		return fmt.Errorf("marshal response data: %w", err)
