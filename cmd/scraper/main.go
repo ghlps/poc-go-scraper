@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"go-scraper/internal/config"
 	"go-scraper/internal/db"
 	"go-scraper/internal/models"
@@ -13,24 +14,34 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func main() {
+type Event struct {
+	RuCode  string `json:"ru_code"`
+	RunType string `json:"run_type"`
+}
+
+func handler(ctx context.Context, event Event) error {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
 
-	ctx := context.Background()
+	runType := "PRIMARY"
+	log.Printf("%+v", event)
+	if event.RunType != "" {
+		runType = event.RunType
+	}
+
 	cfg := config.Load()
 
 	responseData, err := scraper.Scrape()
 	if err != nil {
-		log.Fatalf("scrape failed: %v", err)
+		return fmt.Errorf("scrape failed: %w", err)
 	}
 
 	executionState := models.ExecutionState{
 		ExecutionId: uuid.New().String(),
 		Status:      "SUCCESS",
 		RuCode:      responseData.RuCode,
-		RunType:     "PRIMARY",
+		RunType:     runType,
 		Menu:        responseData,
 		CreatedAt:   time.Now(),
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
@@ -38,12 +49,13 @@ func main() {
 
 	store, err := db.NewStore(ctx, cfg)
 	if err != nil {
-		log.Fatalf("create store failed: %v", err)
+		return fmt.Errorf("create store failed: %w", err)
 	}
 
 	if err := store.Save(ctx, executionState); err != nil {
-		log.Fatalf("db save failed: %v", err)
+		return fmt.Errorf("db save failed: %w", err)
 	}
 
 	log.Println("saved to database successfully!")
+	return nil
 }
