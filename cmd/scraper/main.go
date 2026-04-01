@@ -15,8 +15,8 @@ import (
 )
 
 type Event struct {
-	RuCode  string `json:"ru_code"`
-	RunType string `json:"run_type"`
+	RuCode  string `json:"ruCode"`
+	RunType string `json:"runType"`
 }
 
 func handler(ctx context.Context, event Event) error {
@@ -24,35 +24,42 @@ func handler(ctx context.Context, event Event) error {
 		log.Println("no .env file found, using system env vars")
 	}
 
-	runType := "PRIMARY"
-	log.Printf("%+v", event)
-	if event.RunType != "" {
-		runType = event.RunType
+	rt, err := models.ParseRunType(event.RunType)
+	if err != nil {
+		return fmt.Errorf("validation error: %w", err)
 	}
+
+	restaurantCode, err := models.ParseRestaurantCode(event.RuCode)
+	if err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	restaurant := models.NewRestaurant(restaurantCode)
 
 	cfg := config.Load()
 
-	responseData, err := scraper.Scrape()
-	if err != nil {
-		return fmt.Errorf("scrape failed: %w", err)
-	}
-
-	executionState := models.ExecutionState{
+	scraperExecution := models.ScraperExecution{
 		ExecutionId: uuid.New().String(),
-		Status:      "SUCCESS",
-		RuCode:      responseData.RuCode,
-		RunType:     runType,
-		Menu:        responseData,
+		Restaurant:  restaurant,
+		RunType:     rt,
 		CreatedAt:   time.Now(),
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
 	}
+
+	responseData, err := scraper.Scrape(time.Now(), restaurant)
+	if err != nil {
+		scraperExecution.Status = "FAIL"
+		scraperExecution.Menu = nil
+	}
+
+	scraperExecution.Menu = &responseData
+	scraperExecution.Status = "SUCCESS"
 
 	store, err := db.NewStore(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("create store failed: %w", err)
 	}
 
-	if err := store.Save(ctx, executionState); err != nil {
+	if err := store.Save(ctx, scraperExecution); err != nil {
 		return fmt.Errorf("db save failed: %w", err)
 	}
 

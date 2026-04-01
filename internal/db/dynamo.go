@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-const tableName = "MenuResponses"
+const tableName = "scraper_menu_executions"
 
 type Store struct {
 	client *dynamodb.Client
@@ -47,7 +47,7 @@ func NewStore(ctx context.Context, cfgApp appconfig.Config) (*Store, error) {
 	return &Store{client: client}, nil
 }
 
-func (s *Store) Save(ctx context.Context, data models.ExecutionState) error {
+func (s *Store) Save(ctx context.Context, data models.ScraperExecution) error {
 	item, err := attributevalue.MarshalMap(data)
 	if err != nil {
 		return fmt.Errorf("marshal response data: %w", err)

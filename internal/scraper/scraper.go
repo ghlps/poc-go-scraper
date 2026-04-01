@@ -10,7 +10,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func Scrape() (models.ResponseData, error) {
+func Scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.ResponseData, error) {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
 	)
@@ -33,16 +33,13 @@ func Scrape() (models.ResponseData, error) {
 		}
 	})
 
-	return transverseDOM(time.Now(), c)
+	return transverseDOM(dateToScrape, restaurant, c)
 }
 
-func transverseDOM(dateScraped time.Time, c *colly.Collector) (models.ResponseData, error) {
+func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.ResponseData, error) {
 	state := &scrapeState{
 		payload: models.ResponseData{
 			Date:   getFormattedDate(dateScraped),
-			RuName: "JARDIM BOTÂNICO",
-			RuUrl:  "https://pra.ufpr.br/ru/cardapio-ru-jardim-botanico/",
-			RuCode: "BOT",
 			Served: []string{"breakfast", "lunch", "dinner"},
 			Meals:  make(map[string][]models.Meal),
 		},
@@ -56,7 +53,7 @@ func transverseDOM(dateScraped time.Time, c *colly.Collector) (models.ResponseDa
 		log.Println("Scraping completed.")
 	})
 
-	if err := c.Visit(state.payload.RuUrl); err != nil {
+	if err := c.Visit(restaurant.Url); err != nil {
 		return models.ResponseData{}, fmt.Errorf("visit page: %w", err)
 	}
 
