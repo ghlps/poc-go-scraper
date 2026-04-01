@@ -7,7 +7,7 @@ phases:
   build:
     commands:
       - echo "Building Go Lambda function..."
-      - GOOS=linux GOARCH=amd64 go build -o bootstrap ./cmd/scraper/
+      - GOOS=linux GOARCH=amd64 go build -o bootstrap ./cmd/scraper/lambda/
   post_build:
     commands:
       - echo "Zipping deployment package..."
