@@ -1,4 +1,4 @@
-package main
+package scraper
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"go-scraper/internal/config"
 	"go-scraper/internal/db"
 	"go-scraper/internal/models"
-	"go-scraper/internal/scraper"
 	"log"
 	"time"
 
@@ -14,12 +13,28 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type Event struct {
+type EventLambda struct {
 	RuCode  string `json:"ruCode"`
 	RunType string `json:"runType"`
 }
 
-func handler(ctx context.Context, event Event) error {
+type Scraper struct {
+	store *db.Store
+	cfg   *config.Config
+}
+
+func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
+	store, err := db.NewStore(ctx, *cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &Scraper{
+		store: store,
+		cfg:   cfg,
+	}, nil
+}
+
+func (s *Scraper) Handle(ctx context.Context, event EventLambda) error {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
@@ -45,14 +60,14 @@ func handler(ctx context.Context, event Event) error {
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
 	}
 
-	responseData, err := scraper.Scrape(time.Now(), restaurant)
+	responseData, err := scrape(time.Now(), restaurant)
 	if err != nil {
-		scraperExecution.Status = "FAIL"
+		scraperExecution.Status = models.ExecutionStatusFailed
 		scraperExecution.Menu = nil
 	}
 
 	scraperExecution.Menu = &responseData
-	scraperExecution.Status = "SUCCESS"
+	scraperExecution.Status = models.ExecutionStatusSuccess
 
 	store, err := db.NewStore(ctx, cfg)
 	if err != nil {
@@ -63,6 +78,6 @@ func handler(ctx context.Context, event Event) error {
 		return fmt.Errorf("db save failed: %w", err)
 	}
 
-	log.Println("saved to database successfully!")
+	log.Println("Saved to database successfully")
 	return nil
 }

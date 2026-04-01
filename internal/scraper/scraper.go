@@ -10,7 +10,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func Scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.ResponseData, error) {
+func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.ResponseData, error) {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
 	)
@@ -22,7 +22,7 @@ func Scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Respon
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		log.Println("Everything connected")
+		log.Printf("Everything connected with the RU %s", restaurant.Name)
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
@@ -50,7 +50,7 @@ func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly
 
 	c.OnScraped(func(r *colly.Response) {
 		state.saveMeals()
-		log.Println("Scraping completed.")
+		log.Println("Scraping completed")
 	})
 
 	if err := c.Visit(restaurant.Url); err != nil {
