@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -22,7 +23,7 @@ func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Respon
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		log.Printf("Everything connected with the RU %s", restaurant.Name)
+		log.Printf("Everything connected with the %s", restaurant.Name)
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
@@ -39,17 +40,22 @@ func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Respon
 func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.ResponseData, error) {
 	state := &scrapeState{
 		payload: models.ResponseData{
-			Date:   getFormattedDate(dateScraped),
-			Served: []string{"breakfast", "lunch", "dinner"},
-			Meals:  make(map[string][]models.Meal),
+			Date:  getFormattedDate(dateScraped),
+			Meals: make(map[string][]models.Meal),
 		},
 	}
 
-	state.checkIfDateExists(c, getFormattedDate(dateScraped))
-	state.formatEachRow(c)
+	state.parseMenuForDate(c, getFormattedDate(dateScraped))
 
 	c.OnScraped(func(r *colly.Response) {
 		state.saveMeals()
+
+		served := make([]string, 0, len(state.payload.Meals))
+		for mealType := range state.payload.Meals {
+			served = append(served, mealType)
+		}
+		state.payload.Served = served
+
 		log.Println("Scraping completed")
 	})
 
@@ -60,37 +66,31 @@ func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly
 	return state.payload, nil
 }
 
-func (s *scrapeState) checkIfDateExists(c *colly.Collector, formattedDate string) {
-	c.OnHTML("strong", func(e *colly.HTMLElement) {
-		if s.dateFound {
-			return
-		}
-		dateText := strings.TrimSpace(e.Text)
-		if strings.Contains(dateText, formattedDate) {
-			log.Printf("Matching date found: %s", formattedDate)
-			s.dateFound = true
-			s.tableFound = false
-		}
-	})
-}
+func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string) {
+	c.OnHTML("div", func(e *colly.HTMLElement) {
+		foundDate := false
 
-func (s *scrapeState) formatEachRow(c *colly.Collector) {
-	c.OnHTML("figure.wp-block-table", func(e *colly.HTMLElement) {
-		if !s.dateFound || s.tableFound {
-			return
-		}
-		s.tableFound = true
+		e.DOM.Children().Each(func(_ int, sel *goquery.Selection) {
+			strongText := strings.TrimSpace(sel.Find("strong").Text())
+			if strings.Contains(strongText, formattedDate) {
+				foundDate = true
+				return
+			}
 
-		e.ForEach("tr", func(_ int, row *colly.HTMLElement) {
-			row.ForEach("td", func(_ int, cell *colly.HTMLElement) {
-				s.processCell(cell)
-			})
+			if foundDate && sel.Is("figure.wp-block-table") {
+				sel.Find("tr").Each(func(_ int, row *goquery.Selection) {
+					row.Find("td").Each(func(_ int, cell *goquery.Selection) {
+						s.processCellGoquery(cell)
+					})
+				})
+				foundDate = false
+			}
 		})
 	})
 }
 
-func (s *scrapeState) processCell(cell *colly.HTMLElement) {
-	htmlContent := strings.ToUpper(strings.TrimSpace(cell.Text))
+func (s *scrapeState) processCellGoquery(cell *goquery.Selection) {
+	htmlContent := strings.ToUpper(strings.TrimSpace(cell.Text()))
 
 	if isMealType(htmlContent) {
 		s.saveMeals()
@@ -98,11 +98,11 @@ func (s *scrapeState) processCell(cell *colly.HTMLElement) {
 		return
 	}
 
-	s.parseMealItems(cell)
+	s.parseMealItemsGoquery(cell)
 }
 
-func (s *scrapeState) parseMealItems(cell *colly.HTMLElement) {
-	cellHTML, err := cell.DOM.Html()
+func (s *scrapeState) parseMealItemsGoquery(cell *goquery.Selection) {
+	cellHTML, err := cell.Html()
 	if err != nil {
 		log.Printf("Error getting cell HTML: %v", err)
 		return

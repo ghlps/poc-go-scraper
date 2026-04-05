@@ -1,4 +1,5 @@
 {
   "ruCode": "POL",
-  "runType": "PRIMARY"
+  "runType": "PRIMARY",
+  "dateOffset": 1
 }

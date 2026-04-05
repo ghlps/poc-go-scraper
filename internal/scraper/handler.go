@@ -14,8 +14,9 @@ import (
 )
 
 type EventLambda struct {
-	RuCode  string `json:"ruCode"`
-	RunType string `json:"runType"`
+	RuCode     string `json:"ruCode"`
+	RunType    string `json:"runType"`
+	DateOffset int    `json:"dateOffset"`
 }
 
 type Scraper struct {
@@ -60,7 +61,9 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) error {
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
 	}
 
-	responseData, err := scrape(time.Now(), restaurant)
+	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
+
+	responseData, err := scrape(timeToScrape, restaurant)
 	if err != nil {
 		scraperExecution.Status = models.ExecutionStatusFailed
 		scraperExecution.Menu = nil
