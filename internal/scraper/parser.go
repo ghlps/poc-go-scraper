@@ -1,6 +1,10 @@
 package scraper
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"go-scraper/internal/models"
 	"strings"
 	"time"
@@ -24,6 +28,18 @@ func parseMeal(part string) (models.Meal, error) {
 	})
 
 	return models.Meal{Name: name, Icons: icons}, nil
+}
+
+func hashMenu(menu *models.ResponseData) (string, error) {
+	if menu == nil {
+		return "", nil
+	}
+	b, err := json.Marshal(menu)
+	if err != nil {
+		return "", fmt.Errorf("hash marshal failed: %w", err)
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func getFormattedDate(date time.Time) string {

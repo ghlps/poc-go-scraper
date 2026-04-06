@@ -49,11 +49,10 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) error {
 	if err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
+
 	restaurant := models.NewRestaurant(restaurantCode)
-
-	cfg := config.Load()
-
-	scraperExecution := models.ScraperExecution{
+	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
+	execution := models.ScraperExecution{
 		ExecutionId: uuid.New().String(),
 		Restaurant:  restaurant,
 		RunType:     rt,
@@ -61,23 +60,45 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) error {
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
 	}
 
-	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
+	switch rt {
+	case models.RunTypePrimary:
+		return s.runPrimary(ctx, execution, timeToScrape)
+	case models.RunTypeBackup:
+		return s.runBackup(ctx, execution, timeToScrape)
+	case models.RunTypeCheckup:
+		return s.runCheckup(ctx, execution, timeToScrape)
+	default:
+		return fmt.Errorf("unknown run type: %s", rt)
+	}
+}
 
-	responseData, err := scrape(timeToScrape, restaurant)
-	if err != nil {
-		scraperExecution.Status = models.ExecutionStatusFailed
-		scraperExecution.Menu = nil
+func (s *Scraper) runBackup(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) error {
+	return nil
+}
+
+func (s *Scraper) runCheckup(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) error {
+	return nil
+}
+
+func (s *Scraper) runPrimary(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) error {
+	if err := godotenv.Load(); err != nil {
+		log.Println("no .env file found, using system env vars")
 	}
 
-	scraperExecution.Menu = &responseData
-	scraperExecution.Status = models.ExecutionStatusSuccess
-
-	store, err := db.NewStore(ctx, cfg)
+	responseData, err := scrape(timeToScrape, execution.Restaurant)
 	if err != nil {
-		return fmt.Errorf("create store failed: %w", err)
+		execution.Status = models.ExecutionStatusFailed
+	} else {
+		menuHash, err := hashMenu(&responseData)
+		if err != nil {
+			return fmt.Errorf("hashing failed: %w", err)
+		}
+		execution.Menu = &responseData
+		execution.MenuHash = menuHash
+		execution.Status = models.ExecutionStatusSuccess
 	}
 
-	if err := store.Save(ctx, scraperExecution); err != nil {
+	if err := s.store.Save(ctx, execution); err != nil {
 		return fmt.Errorf("db save failed: %w", err)
 	}
 
