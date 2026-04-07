@@ -64,43 +64,18 @@ func (s *Store) Save(ctx context.Context, data models.ScraperExecution) error {
 	return nil
 }
 
-func (s *Store) GetByDate(ctx context.Context, date string) (*models.ResponseData, error) {
-	result, err := s.client.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(tableName),
-		Key: map[string]types.AttributeValue{
-			"date": &types.AttributeValueMemberS{Value: date},
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("get item: %w", err)
-	}
-	if result.Item == nil {
-		return nil, nil
-	}
-
-	var out models.ResponseData
-	if err := attributevalue.UnmarshalMap(result.Item, &out); err != nil {
-		return nil, fmt.Errorf("unmarshal response data: %w", err)
-	}
-
-	return &out, nil
-}
-
 func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (bool, error) {
-	// We filter by status = FAILED and where created_at begins with the date prefix.
-	// Using a Scan with FilterExpression — suitable for small tables.
-	// For large tables, add a GSI on (date_partition, status) instead.
 	out, err := s.client.Scan(ctx, &dynamodb.ScanInput{
 		TableName:        aws.String(tableName),
 		FilterExpression: aws.String("begins_with(created_at, :date) AND #st = :status"),
 		ExpressionAttributeNames: map[string]string{
-			"#st": "status", // "status" is a reserved word in DynamoDB
+			"#st": "status",
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":date":   &types.AttributeValueMemberS{Value: date}, // e.g. "2025-04-07"
+			":date":   &types.AttributeValueMemberS{Value: date},
 			":status": &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", models.ExecutionStatusFailed)},
 		},
-		Limit: aws.Int32(1), // We only need to know if at least one exists
+		Limit: aws.Int32(1),
 	})
 	if err != nil {
 		return false, fmt.Errorf("scan failed executions for date %s: %w", date, err)
@@ -122,9 +97,11 @@ func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string)
 			":ru":   &types.AttributeValueMemberS{Value: ruCode},
 		},
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("scan executions for date %s: %w", date, err)
 	}
+
 	if len(out.Items) == 0 {
 		return nil, nil
 	}
