@@ -52,18 +52,17 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*RunResult, er
 
 	rt, err := models.ParseRunType(event.RunType)
 	if err != nil {
-		log.Printf("validation error: %v", err)
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
 	restaurantCode, err := models.ParseRestaurantCode(event.RuCode)
 	if err != nil {
-		log.Printf("validation error: %v", err)
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
 	restaurant := models.NewRestaurant(restaurantCode)
 	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
+
 	execution := models.ScraperExecution{
 		ExecutionId: uuid.New().String(),
 		Restaurant:  restaurant,
@@ -72,27 +71,34 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*RunResult, er
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
 	}
 
-	switch rt {
+	return s.decider(ctx, execution, timeToScrape)
+}
+
+func (s *Scraper) decider(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) (*RunResult, error) {
+	switch execution.RunType {
 	case models.RunTypePrimary:
 		menu, err := s.runPrimary(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
 		return &RunResult{Menu: menu}, nil
+
 	case models.RunTypeBackup:
 		menu, err := s.runBackup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
 		return &RunResult{Menu: menu}, nil
+
 	case models.RunTypeCheckup:
-		log.Printf("running a CHECKUP run")
+		log.Printf("running a CHECKUP run for %s", execution.Restaurant.Code)
 		diff, err := s.runCheckup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
 		return &RunResult{Diff: diff}, nil
+
 	default:
-		return nil, fmt.Errorf("unknown run type: %s", rt)
+		return nil, fmt.Errorf("unknown run type: %s", execution.RunType)
 	}
 }
