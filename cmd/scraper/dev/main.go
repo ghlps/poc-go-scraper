@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"go-scraper/internal/config"
 	"go-scraper/internal/scraper"
 	"log"
@@ -35,9 +36,17 @@ func main() {
 	}
 
 	log.Printf("Starting local scrape for: %s", event.RuCode)
-	if err := svc.Handle(ctx, event); err != nil {
+	result, err := svc.Handle(ctx, event)
+	if err != nil {
 		log.Fatalf("Execution failed: %v", err)
 	}
 
+	out, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		log.Fatalf("failed to marshal result: %v", err)
+	}
+
 	log.Println("Local execution finished successfully")
+	fmt.Println(string(out))
+
 }

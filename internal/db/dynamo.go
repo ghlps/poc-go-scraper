@@ -85,3 +85,61 @@ func (s *Store) GetByDate(ctx context.Context, date string) (*models.ResponseDat
 
 	return &out, nil
 }
+
+func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (bool, error) {
+	// We filter by status = FAILED and where created_at begins with the date prefix.
+	// Using a Scan with FilterExpression — suitable for small tables.
+	// For large tables, add a GSI on (date_partition, status) instead.
+	out, err := s.client.Scan(ctx, &dynamodb.ScanInput{
+		TableName:        aws.String(tableName),
+		FilterExpression: aws.String("begins_with(created_at, :date) AND #st = :status"),
+		ExpressionAttributeNames: map[string]string{
+			"#st": "status", // "status" is a reserved word in DynamoDB
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":date":   &types.AttributeValueMemberS{Value: date}, // e.g. "2025-04-07"
+			":status": &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", models.ExecutionStatusFailed)},
+		},
+		Limit: aws.Int32(1), // We only need to know if at least one exists
+	})
+	if err != nil {
+		return false, fmt.Errorf("scan failed executions for date %s: %w", date, err)
+	}
+
+	return len(out.Items) > 0, nil
+}
+
+func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string) (*models.ScraperExecution, error) {
+	out, err := s.client.Scan(ctx, &dynamodb.ScanInput{
+		TableName:        aws.String(tableName),
+		FilterExpression: aws.String("menu.#date = :date AND ru.#code = :ru"),
+		ExpressionAttributeNames: map[string]string{
+			"#code": "code",
+			"#date": "date",
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":date": &types.AttributeValueMemberS{Value: date},
+			":ru":   &types.AttributeValueMemberS{Value: ruCode},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan executions for date %s: %w", date, err)
+	}
+	if len(out.Items) == 0 {
+		return nil, nil
+	}
+
+	var executions []models.ScraperExecution
+	if err := attributevalue.UnmarshalListOfMaps(out.Items, &executions); err != nil {
+		return nil, fmt.Errorf("unmarshal executions: %w", err)
+	}
+
+	latest := executions[0]
+	for _, e := range executions[1:] {
+		if e.CreatedAt.After(latest.CreatedAt) {
+			latest = e
+		}
+	}
+
+	return &latest, nil
+}
