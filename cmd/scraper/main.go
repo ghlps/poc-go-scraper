@@ -43,11 +43,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to marshal result: %v", err)
 		}
+
 		log.Println("Local execution finished successfully")
 		fmt.Println(string(out))
 	} else {
 		lambda.Start(svc.Handle)
-
 	}
-
 }
