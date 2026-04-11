@@ -5,6 +5,7 @@ import (
 	"fmt"
 	appconfig "go-scraper/internal/config"
 	"go-scraper/internal/models"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -23,7 +24,7 @@ type Store struct {
 func NewStore(ctx context.Context, cfgApp appconfig.Config) (*Store, error) {
 	var client *dynamodb.Client
 
-	if cfgApp.IsDev {
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
 		cfg, err := config.LoadDefaultConfig(ctx,
 			config.WithRegion("us-east-1"),
 			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("dummy", "dummy", "")),

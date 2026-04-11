@@ -5,22 +5,22 @@ import (
 )
 
 const (
-	envAppEnv    = "APP_ENV"
 	envDynamoURL = "DYNAMO_URL"
 )
 
 type Config struct {
-	AppEnv    string
 	DynamoURL string
 	IsDev     bool
 }
 
 func Load() Config {
-	appEnv := getEnv(envAppEnv, "prod")
+	dynamoURL := getEnv(envDynamoURL, "")
+	if dynamoURL == "" && os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
+		dynamoURL = os.Getenv("DYNAMO_URL")
+	}
 	return Config{
-		AppEnv:    appEnv,
-		DynamoURL: getEnv(envDynamoURL, ""),
-		IsDev:     appEnv == "dev",
+		DynamoURL: dynamoURL,
+		IsDev:     os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "",
 	}
 }
 
