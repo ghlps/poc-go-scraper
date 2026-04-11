@@ -3,9 +3,9 @@ package db
 import (
 	"context"
 	"fmt"
-	appconfig "go-scraper/internal/config"
-	"go-scraper/internal/models"
 	"os"
+
+	appconfig "github.com/ghlps/poc-go-scraper/internal/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
 const tableName = "scraper_menu_executions"

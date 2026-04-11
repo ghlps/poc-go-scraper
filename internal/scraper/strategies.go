@@ -3,9 +3,10 @@ package scraper
 import (
 	"context"
 	"fmt"
-	"go-scraper/internal/models"
 	"log"
 	"time"
+
+	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
 func (s *Scraper) runCheckup(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) (*MenuDiff, error) {

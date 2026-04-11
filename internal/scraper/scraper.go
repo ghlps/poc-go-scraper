@@ -2,10 +2,11 @@ package scraper
 
 import (
 	"fmt"
-	"go-scraper/internal/models"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/ghlps/poc-go-scraper/internal/models"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"

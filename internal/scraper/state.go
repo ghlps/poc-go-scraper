@@ -1,8 +1,9 @@
 package scraper
 
 import (
-	"go-scraper/internal/models"
 	"log"
+
+	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
 type scrapeState struct {

@@ -3,12 +3,12 @@ package scraper
 import (
 	"context"
 	"fmt"
-	"go-scraper/internal/config"
-	"go-scraper/internal/db"
-	"go-scraper/internal/models"
 	"log"
 	"time"
 
+	"github.com/ghlps/poc-go-scraper/internal/config"
+	"github.com/ghlps/poc-go-scraper/internal/db"
+	"github.com/ghlps/poc-go-scraper/internal/models"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )

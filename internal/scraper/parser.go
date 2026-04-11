@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"go-scraper/internal/models"
 	"strings"
 	"time"
+
+	"github.com/ghlps/poc-go-scraper/internal/models"
 
 	"github.com/PuerkitoBio/goquery"
 )

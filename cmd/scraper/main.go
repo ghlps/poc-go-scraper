@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go-scraper/internal/config"
-	"go-scraper/internal/scraper"
 	"log"
 	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/ghlps/poc-go-scraper/internal/config"
+	"github.com/ghlps/poc-go-scraper/internal/scraper"
 	_ "github.com/joho/godotenv/autoload"
 )
 

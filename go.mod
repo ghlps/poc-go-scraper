@@ -1,4 +1,4 @@
-module go-scraper
+module github.com/ghlps/poc-go-scraper
 
 go 1.24
 
