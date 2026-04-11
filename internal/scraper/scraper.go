@@ -11,7 +11,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.ResponseData, error) {
+func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Menu, error) {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
 	)
@@ -37,9 +37,9 @@ func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Respon
 	return transverseDOM(dateToScrape, restaurant, c)
 }
 
-func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.ResponseData, error) {
+func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.Menu, error) {
 	state := &scrapeState{
-		payload: models.ResponseData{
+		payload: models.Menu{
 			Date:  getFormattedDate(dateScraped),
 			Meals: make(map[string][]models.Meal),
 		},
@@ -60,7 +60,7 @@ func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly
 	})
 
 	if err := c.Visit(restaurant.Url); err != nil {
-		return models.ResponseData{}, fmt.Errorf("visit page: %w", err)
+		return models.Menu{}, fmt.Errorf("visit page: %w", err)
 	}
 
 	return state.payload, nil

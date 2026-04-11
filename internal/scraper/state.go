@@ -10,7 +10,7 @@ type scrapeState struct {
 	tableFound      bool
 	currentMealType string
 	mealOptions     []models.Meal
-	payload         models.ResponseData
+	payload         models.Menu
 }
 
 func (s *scrapeState) saveMeals() {

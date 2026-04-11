@@ -30,7 +30,7 @@ func parseMeal(part string) (models.Meal, error) {
 	return models.Meal{Name: name, Icons: icons}, nil
 }
 
-func hashMenu(menu *models.ResponseData) (string, error) {
+func hashMenu(menu *models.Menu) (string, error) {
 	if menu == nil {
 		return "", nil
 	}

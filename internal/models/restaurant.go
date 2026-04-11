@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -44,6 +45,23 @@ func (r RestaurantCode) String() string {
 	default:
 		return "UNKNOWN"
 	}
+}
+
+func (r RestaurantCode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.String())
+}
+
+func (r *RestaurantCode) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	parsed, err := ParseRestaurantCode(s)
+	if err != nil {
+		return err
+	}
+	*r = parsed
+	return nil
 }
 
 func (r RestaurantCode) FullName() string {

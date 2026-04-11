@@ -19,19 +19,14 @@ type EventLambda struct {
 	DateOffset int    `json:"dateOffset"`
 }
 
-type RunResult struct {
-	Menu *models.ResponseData
-	Diff *MenuDiff
-}
-
 type Scraper struct {
 	store *db.Store
 	cfg   *config.Config
 }
 
 type MenuDiff struct {
-	Previous *models.ResponseData
-	Current  *models.ResponseData
+	Previous *models.Menu
+	Current  *models.Menu
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
@@ -45,7 +40,7 @@ func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
 	}, nil
 }
 
-func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*RunResult, error) {
+func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*models.Menu, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
@@ -65,38 +60,40 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*RunResult, er
 
 	execution := models.ScraperExecution{
 		ExecutionId: uuid.New().String(),
-		Restaurant:  restaurant,
 		RunType:     rt,
 		CreatedAt:   time.Now(),
 		ExpiresAt:   time.Now().Add(72 * time.Hour),
+		Menu: &models.Menu{
+			Restaurant: &restaurant,
+			Meals:      make(map[string][]models.Meal),
+		},
 	}
 
 	return s.decider(ctx, execution, timeToScrape)
 }
 
-func (s *Scraper) decider(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) (*RunResult, error) {
+func (s *Scraper) decider(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
 	switch execution.RunType {
 	case models.RunTypePrimary:
 		menu, err := s.runPrimary(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return &RunResult{Menu: menu}, nil
+		return menu, nil
 
 	case models.RunTypeBackup:
 		menu, err := s.runBackup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return &RunResult{Menu: menu}, nil
+		return menu, nil
 
 	case models.RunTypeCheckup:
-		log.Printf("running a CHECKUP run for %s", execution.Restaurant.Code)
-		diff, err := s.runCheckup(ctx, execution, timeToScrape)
+		_, err := s.runCheckup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return &RunResult{Diff: diff}, nil
+		return execution.Menu, nil
 
 	default:
 		return nil, fmt.Errorf("unknown run type: %s", execution.RunType)
