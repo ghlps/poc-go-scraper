@@ -87,13 +87,10 @@ func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (boo
 }
 
 func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string) (*models.ScraperExecution, error) {
-	out, err := s.client.Scan(ctx, &dynamodb.ScanInput{
-		TableName:        aws.String(tableName),
-		FilterExpression: aws.String("menu.#date = :date AND menu.restaurant.#code = :ru"),
-		ExpressionAttributeNames: map[string]string{
-			"#code": "code",
-			"#date": "date",
-		},
+	out, err := s.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(tableName),
+		IndexName:              aws.String("restaurant-code-date-index"),
+		KeyConditionExpression: aws.String("restaurant_code = :ru AND menu_date = :date"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":date": &types.AttributeValueMemberS{Value: date},
 			":ru":   &types.AttributeValueMemberS{Value: ruCode},
@@ -101,7 +98,7 @@ func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string)
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("scan executions for date %s: %w", date, err)
+		return nil, fmt.Errorf("query executions for date %s: %w", date, err)
 	}
 
 	if len(out.Items) == 0 {

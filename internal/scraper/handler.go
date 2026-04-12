@@ -59,10 +59,11 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
 
 	execution := models.ScraperExecution{
-		ExecutionId: uuid.New().String(),
-		RunType:     rt,
-		CreatedAt:   time.Now(),
-		ExpiresAt:   time.Now().Add(72 * time.Hour),
+		ExecutionId:    uuid.New().String(),
+		RunType:        rt,
+		RestaurantCode: restaurantCode.String(),
+		MenuDate:       timeToScrape.Format("02/01/2006"), CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(72 * time.Hour),
 		Menu: &models.Menu{
 			Restaurant: &restaurant,
 			Meals:      make(map[string][]models.Meal),
