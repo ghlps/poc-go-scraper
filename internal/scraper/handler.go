@@ -40,7 +40,7 @@ func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
 	}, nil
 }
 
-func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*models.Menu, error) {
+func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
@@ -69,10 +69,10 @@ func (s *Scraper) Handle(ctx context.Context, event EventLambda) (*models.Menu, 
 		},
 	}
 
-	return s.decider(ctx, execution, timeToScrape)
+	return s.decider(ctx, &execution, timeToScrape)
 }
 
-func (s *Scraper) decider(ctx context.Context, execution models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
+func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
 	switch execution.RunType {
 	case models.RunTypePrimary:
 		menu, err := s.runPrimary(ctx, execution, timeToScrape)
@@ -89,11 +89,11 @@ func (s *Scraper) decider(ctx context.Context, execution models.ScraperExecution
 		return menu, nil
 
 	case models.RunTypeCheckup:
-		_, err := s.runCheckup(ctx, execution, timeToScrape)
+		menu, err := s.runCheckup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return execution.Menu, nil
+		return menu, nil
 
 	default:
 		return nil, fmt.Errorf("unknown run type: %s", execution.RunType)

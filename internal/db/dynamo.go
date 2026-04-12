@@ -89,7 +89,7 @@ func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (boo
 func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string) (*models.ScraperExecution, error) {
 	out, err := s.client.Scan(ctx, &dynamodb.ScanInput{
 		TableName:        aws.String(tableName),
-		FilterExpression: aws.String("menu.#date = :date AND ru.#code = :ru"),
+		FilterExpression: aws.String("menu.#date = :date AND menu.restaurant.#code = :ru"),
 		ExpressionAttributeNames: map[string]string{
 			"#code": "code",
 			"#date": "date",
