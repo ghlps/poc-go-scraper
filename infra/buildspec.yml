@@ -7,7 +7,7 @@ phases:
   build:
     commands:
       - echo "Building Go Lambda function..."
-      - GOOS=linux GOARCH=amd64 go build -o bootstrap ./cmd/scraper
+      - GOOS=linux GOARCH=arm64 go build -o bootstrap ./cmd/scraper
   post_build:
     commands:
       - echo "Zipping deployment package..."
@@ -15,9 +15,9 @@ phases:
       - |
         if [[ "$CODEBUILD_SOURCE_VERSION" == *"homolog"* ]]; then
           echo "Deploying to homolog..."
-          aws lambda update-function-code --function-name scraper-go --zip-file fileb://deployment.zip --region sa-east-1
+          aws lambda update-function-code --function-name go-ru-scraper --zip-file fileb://deployment.zip --region sa-east-1
         else
           echo "Deploying to production..."
-          aws lambda update-function-code --function-name scraper-go --zip-file fileb://deployment.zip --region sa-east-1
+          aws lambda update-function-code --function-name go-ru-scraper --zip-file fileb://deployment.zip --region sa-east-1
         fi
       - echo "Done!"

@@ -24,9 +24,9 @@ type Scraper struct {
 	cfg   *config.Config
 }
 
-type MenuDiff struct {
-	Previous *models.Menu
-	Current  *models.Menu
+type RunResult struct {
+	Menu    *models.Menu               `json:"menu"`
+	Changes map[string]models.MealDiff `json:"changes,omitempty"` // only populated for checkup
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
@@ -40,7 +40,7 @@ func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
 	}, nil
 }
 
-func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu, error) {
+func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*RunResult, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
@@ -58,12 +58,15 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 	restaurant := models.NewRestaurant(restaurantCode)
 	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
 
+	fmt.Println(restaurant)
+
 	execution := models.ScraperExecution{
 		ExecutionId:    uuid.New().String(),
 		RunType:        rt,
 		RestaurantCode: restaurantCode.String(),
-		MenuDate:       timeToScrape.Format("02/01/2006"), CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(72 * time.Hour),
+		MenuDate:       timeToScrape.Format("02/01/2006"),
+		CreatedAt:      time.Now(),
+		ExpiresAt:      time.Now().Add(72 * time.Hour),
 		Menu: &models.Menu{
 			Restaurant: &restaurant,
 			Meals:      make(map[string][]models.Meal),
@@ -73,29 +76,42 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 	return s.decider(ctx, &execution, timeToScrape)
 }
 
-func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
+func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*RunResult, error) {
 	switch execution.RunType {
 	case models.RunTypePrimary:
 		menu, err := s.runPrimary(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return menu, nil
+		return &RunResult{Menu: menu}, nil
 
 	case models.RunTypeBackup:
 		menu, err := s.runBackup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return menu, nil
+		return &RunResult{Menu: menu}, nil
 
 	case models.RunTypeCheckup:
-		menu, err := s.runCheckup(ctx, execution, timeToScrape)
+		result, err := s.runCheckup(ctx, execution, timeToScrape)
 		if err != nil {
 			return nil, err
 		}
-		return menu, nil
 
+		changedMeals := make(map[string][]models.Meal)
+		for mealType := range result.Changes {
+			if meals, ok := result.Menu.Meals[mealType]; ok {
+				changedMeals[mealType] = meals
+			}
+		}
+		partialMenu := &models.Menu{
+			Restaurant: result.Menu.Restaurant,
+			Date:       result.Menu.Date,
+			ImgMenu:    result.Menu.ImgMenu,
+			Served:     result.Menu.Served,
+			Meals:      changedMeals,
+		}
+		return &RunResult{Menu: partialMenu, Changes: result.Changes}, nil
 	default:
 		return nil, fmt.Errorf("unknown run type: %s", execution.RunType)
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
-func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
+func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.MenuCheckupResult, error) {
 	date := timeToScrape.Format("02/01/2006")
 	MenuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
 	if err != nil {
@@ -27,55 +27,29 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 
 	previous, err := s.store.GetLatestByDate(ctx, date, execution.Menu.Restaurant.Code.String())
 	if err != nil {
-		return nil, fmt.Errorf("fetch preivous execution: %w", err)
+		return nil, fmt.Errorf("fetch previous execution: %w", err)
 	}
+
+	MenuData.Restaurant = execution.Menu.Restaurant
 
 	if previous == nil {
 		log.Printf("no previous execution found for %s, saving as first entry", date)
-		MenuData.Restaurant = execution.Menu.Restaurant
 		execution.Menu = &MenuData
 		execution.MenuHash = currentHash
 		execution.Status = models.ExecutionStatusSuccess
 		if err := s.store.Save(ctx, *execution); err != nil {
 			return nil, fmt.Errorf("db save failed: %w", err)
 		}
-		return &MenuData, nil
+		return &models.MenuCheckupResult{Menu: &MenuData}, nil
 	}
 
 	if previous.MenuHash == currentHash {
 		log.Printf("menu unchanged for %s, skipping save", date)
-		return &MenuData, nil
+		return &models.MenuCheckupResult{Menu: &MenuData}, nil
 	}
 
-	// Menu changed - return only the changed meal types
-	changedMenu := &models.Menu{
-		Restaurant: execution.Menu.Restaurant,
-		Meals:      make(map[string][]models.Meal),
-	}
+	changes := diffMenus(previous.Menu, &MenuData)
 
-	for mealType, currentMeals := range MenuData.Meals {
-		previousMeals, exists := previous.Menu.Meals[mealType]
-
-		// If meal type didn't exist before or the meals are different, include it
-		if !exists {
-			changedMenu.Meals[mealType] = currentMeals
-			log.Printf("Detected NEW meal type: %s with %d meals", mealType, len(currentMeals))
-		} else if !mealsAreEqual(previousMeals, currentMeals) {
-			changedMenu.Meals[mealType] = currentMeals
-			log.Printf("Detected CHANGED meal type: %s (prev: %d meals, curr: %d meals)", mealType, len(previousMeals), len(currentMeals))
-		}
-	}
-
-	// Also check for meal types that were removed
-	for mealType, prevMeals := range previous.Menu.Meals {
-		if _, exists := MenuData.Meals[mealType]; !exists {
-			log.Printf("Detected REMOVED meal type: %s (was %d meals)", mealType, len(prevMeals))
-		}
-	}
-
-	log.Printf("Changed meals to return: %d meal types", len(changedMenu.Meals))
-
-	MenuData.Restaurant = execution.Menu.Restaurant
 	execution.Menu = &MenuData
 	execution.MenuHash = currentHash
 	execution.Status = models.ExecutionStatusSuccess
@@ -83,15 +57,65 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 		return nil, fmt.Errorf("db save failed: %w", err)
 	}
 
-	return changedMenu, nil
+	return &models.MenuCheckupResult{Menu: &MenuData, Changes: changes}, nil
+}
 
+func diffMenus(previous, current *models.Menu) map[string]models.MealDiff {
+	changes := make(map[string]models.MealDiff)
+
+	for mealType, currentMeals := range current.Meals {
+		previousMeals, existed := previous.Meals[mealType]
+		if !existed {
+			changes[mealType] = models.MealDiff{Added: currentMeals}
+			log.Printf("Detected NEW meal type: %s with %d meals", mealType, len(currentMeals))
+			continue
+		}
+		added, removed := diffMealSlices(previousMeals, currentMeals)
+		if len(added) > 0 || len(removed) > 0 {
+			changes[mealType] = models.MealDiff{Added: added, Removed: removed}
+			log.Printf("Detected CHANGED meal type: %s (+%d, -%d)", mealType, len(added), len(removed))
+		}
+	}
+
+	for mealType, previousMeals := range previous.Meals {
+		if _, exists := current.Meals[mealType]; !exists {
+			changes[mealType] = models.MealDiff{Removed: previousMeals}
+			log.Printf("Detected REMOVED meal type: %s (was %d meals)", mealType, len(previousMeals))
+		}
+	}
+
+	return changes
+}
+
+func diffMealSlices(previous, current []models.Meal) (added, removed []models.Meal) {
+	prevIdx := indexMeals(previous)
+	currIdx := indexMeals(current)
+
+	for name, meal := range currIdx {
+		if _, existed := prevIdx[name]; !existed {
+			added = append(added, meal)
+		}
+	}
+	for name, meal := range prevIdx {
+		if _, exists := currIdx[name]; !exists {
+			removed = append(removed, meal)
+		}
+	}
+	return
+}
+
+func indexMeals(meals []models.Meal) map[string]models.Meal {
+	idx := make(map[string]models.Meal, len(meals))
+	for _, m := range meals {
+		idx[m.Name] = m
+	}
+	return idx
 }
 
 func mealsAreEqual(meals1, meals2 []models.Meal) bool {
 	if len(meals1) != len(meals2) {
 		return false
 	}
-
 	for i, meal := range meals1 {
 		if meal.Name != meals2[i].Name {
 			return false
@@ -105,7 +129,6 @@ func mealsAreEqual(meals1, meals2 []models.Meal) bool {
 			}
 		}
 	}
-
 	return true
 }
 
