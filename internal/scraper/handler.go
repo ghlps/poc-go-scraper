@@ -26,7 +26,7 @@ type Scraper struct {
 
 type RunResult struct {
 	Menu    *models.Menu               `json:"menu"`
-	Changes map[string]models.MealDiff `json:"changes,omitempty"` // only populated for checkup
+	Changes map[string]models.MealDiff `json:"changes,omitempty"`
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
