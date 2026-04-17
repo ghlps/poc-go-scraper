@@ -9,16 +9,7 @@ type Menu struct {
 }
 
 type Meal struct {
-	Name  string   `json:"name"  dynamodbav:"name"`
-	Icons []string `json:"icons" dynamodbav:"icons"`
-}
-
-type MealDiff struct {
-	Added   []Meal `json:"added"`
-	Removed []Meal `json:"removed"`
-}
-
-type MenuCheckupResult struct {
-	Menu    *Menu               `json:"menu"`
-	Changes map[string]MealDiff `json:"changes"`
+	Name    string   `json:"name"  dynamodbav:"name"`
+	Icons   []string `json:"icons" dynamodbav:"icons"`
+	Changed bool     `json:"changed" dynamodbav:"changed"`
 }

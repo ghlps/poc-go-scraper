@@ -9,9 +9,9 @@ import (
 	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
-func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.MenuCheckupResult, error) {
+func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
 	date := timeToScrape.Format("02/01/2006")
-	MenuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
+	menuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
 	if err != nil {
 		execution.Status = models.ExecutionStatusFailed
 		if saveErr := s.store.Save(ctx, *execution); saveErr != nil {
@@ -20,7 +20,7 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 		return nil, fmt.Errorf("scrape failed: %w", err)
 	}
 
-	currentHash, err := hashMenu(&MenuData)
+	currentHash, err := hashMenu(&menuData)
 	if err != nil {
 		return nil, fmt.Errorf("hashing failed: %w", err)
 	}
@@ -30,78 +30,67 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 		return nil, fmt.Errorf("fetch previous execution: %w", err)
 	}
 
-	MenuData.Restaurant = execution.Menu.Restaurant
+	menuData.Restaurant = execution.Menu.Restaurant
 
 	if previous == nil {
 		log.Printf("no previous execution found for %s, saving as first entry", date)
-		execution.Menu = &MenuData
+		execution.Menu = &menuData
 		execution.MenuHash = currentHash
 		execution.Status = models.ExecutionStatusSuccess
 		if err := s.store.Save(ctx, *execution); err != nil {
 			return nil, fmt.Errorf("db save failed: %w", err)
 		}
-		return &models.MenuCheckupResult{Menu: &MenuData}, nil
+		return &menuData, nil
 	}
 
 	if previous.MenuHash == currentHash {
 		log.Printf("menu unchanged for %s, skipping save", date)
-		return &models.MenuCheckupResult{Menu: &MenuData}, nil
+		return &menuData, nil
 	}
 
-	changes := diffMenus(previous.Menu, &MenuData)
+	markChangedMeals(previous.Menu, &menuData)
 
-	execution.Menu = &MenuData
+	execution.Menu = &menuData
 	execution.MenuHash = currentHash
 	execution.Status = models.ExecutionStatusSuccess
 	if err := s.store.Save(ctx, *execution); err != nil {
 		return nil, fmt.Errorf("db save failed: %w", err)
 	}
 
-	return &models.MenuCheckupResult{Menu: &MenuData, Changes: changes}, nil
+	return &menuData, nil
 }
 
-func diffMenus(previous, current *models.Menu) map[string]models.MealDiff {
-	changes := make(map[string]models.MealDiff)
-
+func markChangedMeals(previous, current *models.Menu) {
 	for mealType, currentMeals := range current.Meals {
 		previousMeals, existed := previous.Meals[mealType]
 		if !existed {
-			changes[mealType] = models.MealDiff{Added: currentMeals}
+			for i := range currentMeals {
+				currentMeals[i].Changed = true
+			}
+			current.Meals[mealType] = currentMeals
 			log.Printf("Detected NEW meal type: %s with %d meals", mealType, len(currentMeals))
 			continue
 		}
-		added, removed := diffMealSlices(previousMeals, currentMeals)
-		if len(added) > 0 || len(removed) > 0 {
-			changes[mealType] = models.MealDiff{Added: added, Removed: removed}
-			log.Printf("Detected CHANGED meal type: %s (+%d, -%d)", mealType, len(added), len(removed))
+
+		prevIdx := indexMeals(previousMeals)
+		changed := false
+		for i, meal := range currentMeals {
+			if _, existed := prevIdx[meal.Name]; !existed {
+				currentMeals[i].Changed = true
+				changed = true
+			}
+		}
+		if changed {
+			current.Meals[mealType] = currentMeals
+			log.Printf("Detected CHANGED meal type: %s", mealType)
 		}
 	}
 
-	for mealType, previousMeals := range previous.Meals {
+	for mealType := range previous.Meals {
 		if _, exists := current.Meals[mealType]; !exists {
-			changes[mealType] = models.MealDiff{Removed: previousMeals}
-			log.Printf("Detected REMOVED meal type: %s (was %d meals)", mealType, len(previousMeals))
+			log.Printf("Detected REMOVED meal type: %s", mealType)
 		}
 	}
-
-	return changes
-}
-
-func diffMealSlices(previous, current []models.Meal) (added, removed []models.Meal) {
-	prevIdx := indexMeals(previous)
-	currIdx := indexMeals(current)
-
-	for name, meal := range currIdx {
-		if _, existed := prevIdx[name]; !existed {
-			added = append(added, meal)
-		}
-	}
-	for name, meal := range prevIdx {
-		if _, exists := currIdx[name]; !exists {
-			removed = append(removed, meal)
-		}
-	}
-	return
 }
 
 func indexMeals(meals []models.Meal) map[string]models.Meal {
@@ -110,26 +99,6 @@ func indexMeals(meals []models.Meal) map[string]models.Meal {
 		idx[m.Name] = m
 	}
 	return idx
-}
-
-func mealsAreEqual(meals1, meals2 []models.Meal) bool {
-	if len(meals1) != len(meals2) {
-		return false
-	}
-	for i, meal := range meals1 {
-		if meal.Name != meals2[i].Name {
-			return false
-		}
-		if len(meal.Icons) != len(meals2[i].Icons) {
-			return false
-		}
-		for j, icon := range meal.Icons {
-			if icon != meals2[i].Icons[j] {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 func (s *Scraper) runPrimary(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
@@ -149,7 +118,7 @@ func (s *Scraper) runBackup(ctx context.Context, execution *models.ScraperExecut
 }
 
 func (s *Scraper) scrapeAndSave(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
-	MenuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
+	menuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
 	if err != nil {
 		execution.Status = models.ExecutionStatusFailed
 		if saveErr := s.store.Save(ctx, *execution); saveErr != nil {
@@ -158,18 +127,18 @@ func (s *Scraper) scrapeAndSave(ctx context.Context, execution *models.ScraperEx
 		return nil, fmt.Errorf("scrape failed: %w", err)
 	}
 
-	menuHash, err := hashMenu(&MenuData)
+	menuHash, err := hashMenu(&menuData)
 	if err != nil {
 		return nil, fmt.Errorf("hashing failed: %w", err)
 	}
 
-	MenuData.Restaurant = execution.Menu.Restaurant
-	execution.Menu = &MenuData
+	menuData.Restaurant = execution.Menu.Restaurant
+	execution.Menu = &menuData
 	execution.MenuHash = menuHash
 	execution.Status = models.ExecutionStatusSuccess
 
 	if err := s.store.Save(ctx, *execution); err != nil {
 		return nil, fmt.Errorf("db save failed: %w", err)
 	}
-	return &MenuData, nil
+	return &menuData, nil
 }

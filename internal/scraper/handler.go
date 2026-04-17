@@ -24,11 +24,6 @@ type Scraper struct {
 	cfg   *config.Config
 }
 
-type RunResult struct {
-	Menu    *models.Menu               `json:"menu"`
-	Changes map[string]models.MealDiff `json:"changes,omitempty"`
-}
-
 func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
 	store, err := db.NewStore(ctx, *cfg)
 	if err != nil {
@@ -40,7 +35,7 @@ func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
 	}, nil
 }
 
-func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*RunResult, error) {
+func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
@@ -76,42 +71,17 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*RunResult, e
 	return s.decider(ctx, &execution, timeToScrape)
 }
 
-func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*RunResult, error) {
+func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
 	switch execution.RunType {
 	case models.RunTypePrimary:
-		menu, err := s.runPrimary(ctx, execution, timeToScrape)
-		if err != nil {
-			return nil, err
-		}
-		return &RunResult{Menu: menu}, nil
+		return s.runPrimary(ctx, execution, timeToScrape)
 
 	case models.RunTypeBackup:
-		menu, err := s.runBackup(ctx, execution, timeToScrape)
-		if err != nil {
-			return nil, err
-		}
-		return &RunResult{Menu: menu}, nil
+		return s.runBackup(ctx, execution, timeToScrape)
 
 	case models.RunTypeCheckup:
-		result, err := s.runCheckup(ctx, execution, timeToScrape)
-		if err != nil {
-			return nil, err
-		}
+		return s.runCheckup(ctx, execution, timeToScrape)
 
-		changedMeals := make(map[string][]models.Meal)
-		for mealType := range result.Changes {
-			if meals, ok := result.Menu.Meals[mealType]; ok {
-				changedMeals[mealType] = meals
-			}
-		}
-		partialMenu := &models.Menu{
-			Restaurant: result.Menu.Restaurant,
-			Date:       result.Menu.Date,
-			ImgMenu:    result.Menu.ImgMenu,
-			Served:     result.Menu.Served,
-			Meals:      changedMeals,
-		}
-		return &RunResult{Menu: partialMenu, Changes: result.Changes}, nil
 	default:
 		return nil, fmt.Errorf("unknown run type: %s", execution.RunType)
 	}
