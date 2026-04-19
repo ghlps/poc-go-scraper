@@ -34,7 +34,6 @@ func main() {
 		}
 
 		log.Printf("Starting local scrape for: %s", event.RuCode)
-		log.Printf("Using the event type: %s", event.RunType)
 		result, err := svc.Handle(ctx, &event)
 		if err != nil {
 			log.Fatalf("Execution failed: %v", err)

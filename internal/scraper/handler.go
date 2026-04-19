@@ -40,11 +40,6 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 		log.Println("no .env file found, using system env vars")
 	}
 
-	rt, err := models.ParseRunType(event.RunType)
-	if err != nil {
-		return nil, fmt.Errorf("validation error: %w", err)
-	}
-
 	restaurantCode, err := models.ParseRestaurantCode(event.RuCode)
 	if err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
@@ -57,7 +52,6 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 
 	execution := models.ScraperExecution{
 		ExecutionId:    uuid.New().String(),
-		RunType:        rt,
 		RestaurantCode: restaurantCode.String(),
 		MenuDate:       timeToScrape.Format("02/01/2006"),
 		CreatedAt:      time.Now(),
@@ -72,17 +66,5 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 }
 
 func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
-	switch execution.RunType {
-	case models.RunTypePrimary:
-		return s.runPrimary(ctx, execution, timeToScrape)
-
-	case models.RunTypeBackup:
-		return s.runBackup(ctx, execution, timeToScrape)
-
-	case models.RunTypeCheckup:
-		return s.runCheckup(ctx, execution, timeToScrape)
-
-	default:
-		return nil, fmt.Errorf("unknown run type: %s", execution.RunType)
-	}
+	return s.runCheckup(ctx, execution, timeToScrape)
 }
