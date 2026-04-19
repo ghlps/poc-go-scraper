@@ -25,7 +25,7 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
     entrypoint: >
       aws dynamodb create-table
-        --table-name scraper_menu_executions
+        --table-name scraper-menu-executions
         --attribute-definitions
           AttributeName=execution_id,AttributeType=S
           AttributeName=restaurant_code,AttributeType=S

@@ -16,7 +16,7 @@ import (
 	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
-const tableName = "scraper_menu_executions"
+const tableName = "scraper-menu-executions"
 
 type Store struct {
 	client *dynamodb.Client
