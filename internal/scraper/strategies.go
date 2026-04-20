@@ -34,7 +34,7 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 
 	if existingWithHash != nil {
 		log.Printf("Execution with same hash already exists for %s, skipping save", date)
-		return &menuData, nil
+		return nil, nil
 	}
 
 	execution.Menu = &menuData
