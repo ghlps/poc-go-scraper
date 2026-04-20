@@ -25,30 +25,17 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 		return nil, fmt.Errorf("hashing failed: %w", err)
 	}
 
-	previous, err := s.store.GetLatestByDate(ctx, date, execution.Menu.Restaurant.Code.String())
-	if err != nil {
-		return nil, fmt.Errorf("fetch previous execution: %w", err)
-	}
-
 	menuData.Restaurant = execution.Menu.Restaurant
 
-	if previous == nil {
-		log.Printf("no previous execution found for %s, saving as first entry", date)
-		execution.Menu = &menuData
-		execution.MenuHash = currentHash
-		execution.Status = models.ExecutionStatusSuccess
-		if err := s.store.Save(ctx, *execution); err != nil {
-			return nil, fmt.Errorf("db save failed: %w", err)
-		}
-		return &menuData, nil
+	existingWithHash, err := s.store.GetLatestByHash(ctx, date, execution.Menu.Restaurant.Code.String(), currentHash)
+	if err != nil {
+		return nil, fmt.Errorf("Fetch previous execution: %w", err)
 	}
 
-	if previous.MenuHash == currentHash {
-		log.Printf("menu unchanged for %s, skipping save", date)
+	if existingWithHash != nil {
+		log.Printf("Execution with same hash already exists for %s, skipping save", date)
 		return &menuData, nil
 	}
-
-	markChangedMeals(previous.Menu, &menuData)
 
 	execution.Menu = &menuData
 	execution.MenuHash = currentHash
@@ -57,5 +44,6 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 		return nil, fmt.Errorf("db save failed: %w", err)
 	}
 
+	log.Printf("New menu saved for %s with hash %s", date, currentHash)
 	return &menuData, nil
 }

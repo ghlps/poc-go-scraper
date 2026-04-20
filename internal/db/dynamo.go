@@ -86,7 +86,7 @@ func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (boo
 	return len(out.Items) > 0, nil
 }
 
-func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string) (*models.ScraperExecution, error) {
+func (s *Store) GetLatestByHash(ctx context.Context, date string, ruCode string, hash string) (*models.ScraperExecution, error) {
 	out, err := s.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(tableName),
 		IndexName:              aws.String("restaurant-code-date-index"),
@@ -110,12 +110,11 @@ func (s *Store) GetLatestByDate(ctx context.Context, date string, ruCode string)
 		return nil, fmt.Errorf("unmarshal executions: %w", err)
 	}
 
-	latest := executions[0]
-	for _, e := range executions[1:] {
-		if e.CreatedAt.After(latest.CreatedAt) {
-			latest = e
+	for _, e := range executions {
+		if e.MenuHash == hash {
+			return &e, nil
 		}
 	}
 
-	return &latest, nil
+	return nil, nil
 }
