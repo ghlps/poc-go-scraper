@@ -50,13 +50,6 @@ func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly
 
 	c.OnScraped(func(r *colly.Response) {
 		state.saveMeals()
-
-		served := make([]string, 0, len(state.payload.Meals))
-		for mealType := range state.payload.Meals {
-			served = append(served, mealType)
-		}
-		state.payload.Served = served
-
 		log.Println("Scraping completed")
 	})
 

@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -38,8 +37,6 @@ func hashMenu(menu *models.Menu) (string, error) {
 	}
 
 	menuCopy := *menu
-
-	sort.Strings(menuCopy.Served)
 
 	b, err := json.Marshal(menuCopy)
 	if err != nil {
