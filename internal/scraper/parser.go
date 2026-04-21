@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -33,9 +34,14 @@ func parseMeal(part string) (models.Meal, error) {
 
 func hashMenu(menu *models.Menu) (string, error) {
 	if menu == nil {
-		return "", nil
+		return "", fmt.Errorf("menu is nil")
 	}
-	b, err := json.Marshal(menu)
+
+	menuCopy := *menu
+
+	sort.Strings(menuCopy.Served)
+
+	b, err := json.Marshal(menuCopy)
 	if err != nil {
 		return "", fmt.Errorf("hash marshal failed: %w", err)
 	}
