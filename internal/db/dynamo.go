@@ -86,7 +86,7 @@ func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (boo
 	return len(out.Items) > 0, nil
 }
 
-func (s *Store) GetLatestByHash(ctx context.Context, date string, ruCode string, hash string) (*models.ScraperExecution, error) {
+func (s *Store) GetLatestByDay(ctx context.Context, date string, ruCode string) (*models.ScraperExecution, error) {
 	out, err := s.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(tableName),
 		IndexName:              aws.String("restaurant-code-date-index"),
@@ -95,26 +95,22 @@ func (s *Store) GetLatestByHash(ctx context.Context, date string, ruCode string,
 			":date": &types.AttributeValueMemberS{Value: date},
 			":ru":   &types.AttributeValueMemberS{Value: ruCode},
 		},
+		ScanIndexForward: aws.Bool(false),
+		Limit:            aws.Int32(1),
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("query executions for date %s: %w", date, err)
+		return nil, fmt.Errorf("query latest execution for date %s: %w", date, err)
 	}
 
 	if len(out.Items) == 0 {
 		return nil, nil
 	}
 
-	var executions []models.ScraperExecution
-	if err := attributevalue.UnmarshalListOfMaps(out.Items, &executions); err != nil {
-		return nil, fmt.Errorf("unmarshal executions: %w", err)
+	var execution models.ScraperExecution
+	if err := attributevalue.UnmarshalMap(out.Items[0], &execution); err != nil {
+		return nil, fmt.Errorf("unmarshal execution: %w", err)
 	}
 
-	for _, e := range executions {
-		if e.MenuHash == hash {
-			return &e, nil
-		}
-	}
-
-	return nil, nil
+	return &execution, nil
 }
