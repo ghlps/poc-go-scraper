@@ -17,6 +17,11 @@ func (s *Scraper) runCheckup(ctx context.Context, execution *models.ScraperExecu
 		return nil, fmt.Errorf("scrape failed: %w", err)
 	}
 
+	if menuData.Meals == nil {
+		log.Printf("No meal was found for this specific date")
+		return nil, nil
+	}
+
 	currentHash, err := hashMenu(&menuData)
 	if err != nil {
 		return nil, fmt.Errorf("hashing failed: %w", err)

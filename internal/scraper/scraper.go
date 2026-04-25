@@ -57,7 +57,20 @@ func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly
 		return models.Menu{}, fmt.Errorf("visit page: %w", err)
 	}
 
-	return state.payload, nil
+	if !hasAnyMeals(state.payload.Meals) {
+		return models.Menu{}, nil
+	} else {
+		return state.payload, nil
+	}
+}
+
+func hasAnyMeals(meals map[string][]models.Meal) bool {
+	for _, items := range meals {
+		if len(items) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string) {
