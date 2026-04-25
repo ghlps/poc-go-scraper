@@ -12,5 +12,5 @@ type ScraperExecution struct {
 	RestaurantCode string          `json:"restaurantCode,omitempty" dynamodbav:"restaurant_code,omitempty"`
 	MenuDate       string          `json:"menuDate,omitempty" dynamodbav:"menu_date,omitempty"`
 	CreatedAt      time.Time       `json:"createdAt"     dynamodbav:"created_at"`
-	ExpiresAt      time.Time       `json:"expiresAt"     dynamodbav:"expires_at"`
+	ExpiresAt      int64           `json:"expiresAt"     dynamodbav:"expires_at"`
 }
